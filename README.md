@@ -1,4 +1,4 @@
-# RoboTrainer Docker Humble
+# RoboTrainer Automatic Assessment
 
 Build the Docker image with the following command:
 ```bash
@@ -28,3 +28,6 @@ To start a Jupyter Notebook server, run the following command:
 ./start_jupyter_server.sh
 ```
 Go to `http://localhost:8888` in your browser to access the Jupyter Notebook.
+
+## TODO
+- [ ] Add GPU support
