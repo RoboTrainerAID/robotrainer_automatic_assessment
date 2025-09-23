@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 class DataProcessor:
 
@@ -9,6 +10,7 @@ class DataProcessor:
         """
         user_info_filtered = user_info.rename(columns={"Alter": "age", "Geschlecht": "gender"})[["user", "age", "gender"]]
         return data.merge(user_info_filtered, on="user", how="left")
+
 
     def filter_topics(self, data):
         """
@@ -25,18 +27,40 @@ class DataProcessor:
 
         return data[base_cols + topic_cols]
 
-    def limit_data_by_time(self, data, time_column, path_column, time_length, duration_column="total_duration"):
-        """
-        Begrenzt die Daten für jede 'path' auf eine bestimmte Zeitlänge
-        relativ zur total_duration.
-        """
-        def clip_group(group):
-            max_time = min(group[duration_column].iloc[0], time_length)
-            return group[group[time_column] <= max_time]
 
-        # concat statt apply -> vermeidet Index-Duplikate
-        groups = [clip_group(g) for _, g in data.groupby(path_column)]
-        return pd.concat(groups, ignore_index=True)
+    def aggregate_by_samples(self, data, time_column, path_column, duration_column="total_duration", samples_per_unit=1):
+        """
+        Aggregates the data per user/path to a desired sample rate.
+        Fills missing values for heart_rate, hrv, and ppi with previous or next values of the same user.
+        """
+        result_list = []
+
+        # Columns to be filled
+        cols_to_fill = [c for c in ["heart_rate", "hrv", "ppi"] if c in data.columns]
+        data = data.sort_values(["user", path_column, time_column])
+
+        # Forward and backward fill per user
+        for col in cols_to_fill:
+            data[col] = data.groupby("user")[col].ffill().bfill()
+
+        for (user, path), group in data.groupby(["user", path_column]):
+            total_time = group[duration_column].iloc[0]
+
+            n_samples = max(1, int(np.ceil(total_time * samples_per_unit)))
+            bins = np.linspace(0, total_time, n_samples + 1)
+
+            group["interval"] = pd.cut(group[time_column], bins=bins, labels=False, include_lowest=True)
+
+            agg = group.groupby("interval").mean(numeric_only=True)
+
+            # Additional information
+            agg[path_column] = path
+            agg["user"] = user
+
+            result_list.append(agg)
+
+        return pd.concat(result_list, ignore_index=True)
+
 
     def add_ground_truth(self, data, ground_truth_path, on_column="user"):
         """
