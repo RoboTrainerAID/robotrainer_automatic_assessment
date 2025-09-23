@@ -31,6 +31,7 @@ docker run \
     -v $PWD/envs:/opt/conda/envs \
     -v $PWD/notebooks:/opt/notebooks \
     -v /dev:/dev  \
+    -v $PWD/src:/opt/src \
     ${CONTAINER_NAME}:${CONTAINER_TAG} \
     /bin/bash -c "${COMMAND}"
 
