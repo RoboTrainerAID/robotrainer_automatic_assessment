@@ -1,40 +1,54 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+import configparser
+from data_processing import DataProcessor  # deine Klasse
 
-from sklearn.model_selection import train_test_split
+def main():
+    # --- Konfiguration laden ---
+    config = configparser.ConfigParser()
+    config.read("opt/src/config.ini")
+    print(config.sections())
 
-from config import PipelineConfig
-from data_preparation import (data_normalization, apply_pca)
-from ai_models import Model
+    settings = config["SETTINGS"]
+    data_path = config["DATA"]
 
-
-pipeline_config = PipelineConfig('opt/src/config.ini')
-print("pipeline_config.topics:", pipeline_config.topics)
-
-print ("DataFrame is loading")
-df = pd.read_csv(pipeline_config.path_to_data)
-print("DataFrame loaded successfully")
-print(df.head())
-
-df = data_normalization(df)
-print("DataFrame normalized successfully")
-print(df.head())
-
-topics_to_exclude = [col for col in pipeline_config.topics if col in df.columns]
-df_for_pca = df.drop(columns=topics_to_exclude)
-
-print("Data prepared for PCA successfully")
-print(df_for_pca.head())
-
-df_pca, variance_ratio = apply_pca(df_for_pca, n_components=0.95)
-print("PCA applied successfully")
-print(df_pca.head())
-
-X = df_pca
+    data = pd.read_csv(data_path.get("data_csv"))
+    user_info = pd.read_csv(data_path.get("user_info_csv"))
 
 
-y = df[pipeline_config.topics[0]]
+    # --- DataProcessor nutzen ---
+    processor = DataProcessor()
+    processor.config = {
+        "topics": [t.strip() for t in settings.get("topics", "").split(",")]
+    }
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
 
-best_model = Model.optimize_model("svr", X_train, y_train)
+    # 2) Topics filtern
+    data = processor.filter_topics(data)
+    print("Spaltennamen:", data.columns.tolist())
+    print("Doppelte Spalten:", data.columns[data.columns.duplicated()].tolist())
+    data = data.loc[:, ~data.columns.duplicated()].copy()
+    user_info = user_info.loc[:, ~user_info.columns.duplicated()].copy()
+
+
+    # 3) Zeitliche Begrenzung (relativ zu total_duration)
+    data = processor.limit_data_by_time(
+        data,
+        time_column=settings.get("time_column"),
+        path_column=settings.get("path_column"),
+        time_length=int(settings.get("time_length")),
+        duration_column=settings.get("duration_column")
+    )
+
+    
+    # 1) Alter & Geschlecht hinzufügen
+    if settings.getboolean("add_age_gender", fallback=False):
+        data = processor.add_age_and_gender(data, user_info)
+
+    print("\n--- Ergebnis ---")
+    print(data)
+
+  
+
+if __name__ == "__main__":
+    main()
