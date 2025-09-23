@@ -37,3 +37,11 @@ class DataProcessor:
         # concat statt apply -> vermeidet Index-Duplikate
         groups = [clip_group(g) for _, g in data.groupby(path_column)]
         return pd.concat(groups, ignore_index=True)
+
+    def add_ground_truth(self, data, ground_truth_path, on_column="user"):
+        """
+        Adds the ground truth data from a CSV file based on the column `on_column`.
+        """
+        ground_truth = pd.read_csv(ground_truth_path)
+        ground_truth = ground_truth.loc[:, ~ground_truth.columns.duplicated()].copy()
+        return data.merge(ground_truth, on=on_column, how="left")

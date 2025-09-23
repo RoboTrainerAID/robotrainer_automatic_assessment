@@ -44,6 +44,9 @@ def main():
     # 1) Alter & Geschlecht hinzufügen
     if settings.getboolean("add_age_gender", fallback=False):
         data = processor.add_age_and_gender(data, user_info)
+    
+    ground_truth_path = data_path.get("ground_truth_csv")
+    data = processor.add_ground_truth(data, ground_truth_path, on_column="user")
 
     print("\n--- Ergebnis ---")
     print(data)
