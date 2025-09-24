@@ -43,7 +43,6 @@ def main():
         samples_per_unit=samples_per_second
     )
 
-    
     # --- Optional: Add age and gender ---
     if settings.getboolean("add_age_gender", fallback=False):
         data = processor.add_age_and_gender(data, user_info)
@@ -53,10 +52,7 @@ def main():
     data = processor.add_ground_truth(data, ground_truth_path, on_column="user")
 
     # --- Save processed data ---
-    output_dir = "opt/src/processed_data"
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "processed_data.csv")
-    data.to_csv(output_path, index=False)
+    data.to_csv("opt/src/data/processed_data.csv", index=False)
 
     # --- Show final data ---
     print("\n--- Ergebnis ---")
