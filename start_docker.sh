@@ -35,4 +35,5 @@ docker run \
     ${CONTAINER_NAME}:${CONTAINER_TAG} \
     /bin/bash -c "${COMMAND}"
 
+    
     # --env-file .env \

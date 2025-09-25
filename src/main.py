@@ -1,40 +1,53 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 from sklearn.model_selection import train_test_split
 
 from config import PipelineConfig
-from data_preparation import (data_normalization, apply_pca)
+from data_preparation import (data_normalization, apply_pca, prepare_input_blocks, ensure_numeric)
 from ai_models import Model
 
 
-pipeline_config = PipelineConfig('opt/src/config.ini')
-print("pipeline_config.topics:", pipeline_config.topics)
+def run_pipeline():
+    pipeline_config = PipelineConfig('opt/src/config.ini')
+    print("pipeline_config.topics:", pipeline_config.topics)
 
-print ("DataFrame is loading")
-df = pd.read_csv(pipeline_config.path_to_data)
-print("DataFrame loaded successfully")
-print(df.head())
+    print("DataFrame is loading")
+    df = pd.read_csv(pipeline_config.path_to_data)
+    print("DataFrame loaded successfully")
+    print(df.head())
 
-df = data_normalization(df)
-print("DataFrame normalized successfully")
-print(df.head())
+    df = pd.get_dummies(df, drop_first=False) 
+    
+    X, y = prepare_input_blocks(df, pipeline_config, mode=pipeline_config.mode)
+    print(f"Prepared input blocks, shape X: {X.shape}, y: {y.shape}")
 
-topics_to_exclude = [col for col in pipeline_config.topics if col in df.columns]
-df_for_pca = df.drop(columns=topics_to_exclude)
+    X = ensure_numeric(X)
+   
+    df = pd.DataFrame(X)
 
-print("Data prepared for PCA successfully")
-print(df_for_pca.head())
+    X_norm = data_normalization(df).values
+    print("Data normalized successfully")
 
-df_pca, variance_ratio = apply_pca(df_for_pca, n_components=0.95)
-print("PCA applied successfully")
-print(df_pca.head())
+    if pipeline_config.use_pca:
+        X_pca, variance_ratio = apply_pca(X_norm, n_components=pipeline_config.pca_variance_threshold)
+        print("PCA applied successfully")
+        X_final = X_pca
+    else:
+        X_final = X_norm
+        print("PCA not applied, using original data")
 
-X = df_pca
+    best_model = Model.optimize_model(
+        model_type=pipeline_config.model,
+        k_folds=pipeline_config.kfolds,
+        X_train=X_final,
+        y_train=y
+    )
+    
+    best_model = Model.optimize_model(pipeline_config.model, pipeline_config.kfolds, X, y)
+    return best_model
 
 
-y = df[pipeline_config.topics[0]]
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-best_model = Model.optimize_model("svr", X_train, y_train)
+if __name__ == "__main__":
+    run_pipeline()
