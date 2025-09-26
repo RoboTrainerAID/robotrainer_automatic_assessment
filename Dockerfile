@@ -2,7 +2,7 @@
 ##                                 Base Image                               ##
 ##############################################################################
 # Debian 12 (Bookworm) 
-FROM continuumio/miniconda3:4.12.0
+FROM continuumio/anaconda3:main
 ENV TZ=Europe/Berlin
 ENV TERM=xterm-256color
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
@@ -26,7 +26,6 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
 # Install default packages
 RUN apt-get update && apt-get install --no-install-recommends -y \
     iputils-ping nano htop git sudo wget curl gedit gdb lsb-release bash-completion \
-    build-essential swig python3-dev python3-setuptools python3-wheel \
     && rm -rf /var/lib/apt/lists/*
 
 # Install custom dependencies
@@ -42,8 +41,10 @@ COPY .bashrc /root/.bashrc
 ##############################################################################
 ##                                    Python-Pakete                                  ##
 ##############################################################################
-RUN pip install numpy==1.21.6 matplotlib pandas scikit-learn scikit-optimize
-RUN pip install auto-sklearn
+# Install auto-sklearn (über pip)
+#RUN pip install auto-sklearn
+RUN pip install scikit-optimize
+
 
 ##############################################################################
 ##                                 Autostart                                ##
