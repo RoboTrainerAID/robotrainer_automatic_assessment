@@ -7,6 +7,7 @@ class PipelineConfig:
         self.pipline_cfile = None
 
         self.path_to_data = None            # String: Path to the data directory
+        self.path_to_evaluation = None      # String: Path to the evaluation directory
         self.topics = []                    # List: Topics to include in the analysis
         self.model = None                   # String: Model type to use
         self.pca_variance_threshold = None  # Float: Variance threshold for PCA   
@@ -28,6 +29,7 @@ class PipelineConfig:
 
     def read_data_path(self):
         self.path_to_data = self.pipline_cfile.get('DATA PATH', 'path_to_data')
+        self.path_to_evaluation = self.pipline_cfile.get('DATA PATH', 'path_to_evaluation')
 
     def read_ground_truth(self):
         raw_topics = self.pipline_cfile.get('GROUND TRUTH', 'topics')

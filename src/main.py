@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -44,8 +45,19 @@ def run_pipeline():
         X_train=X_final,
         y_train=y
     )
+    scores = best_model.evaluate(X_final, y)
+
+    dataset_name = os.path.basename(pipeline_config.path_to_evaluation)
+
+    Model.save_results_to_csv(
+        scores,
+        best_model.model.get_params(),
+        pipeline_config.model,
+        dataset_name,
+        filename="results.csv"
+    )
     
-    best_model = Model.optimize_model(pipeline_config.model, pipeline_config.kfolds, X, y)
+    #best_model = Model.optimize_model(pipeline_config.model, pipeline_config.kfolds, X, y)
     return best_model
 
 
