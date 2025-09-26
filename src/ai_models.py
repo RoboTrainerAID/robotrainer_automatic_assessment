@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import autosklearn.regression
 
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
@@ -25,7 +26,8 @@ class Model:
     @staticmethod
     def _initialize_model(model_type, **kwargs):
         if model_type == "svr":
-            return SVR(**kwargs)
+            base_model = SVR(**kwargs)
+            return MultiOutputRegressor(base_model)
         elif model_type == "random_forest":
             return RandomForestRegressor(**kwargs)
         elif model_type == "mlp":
@@ -47,11 +49,11 @@ class Model:
     def optimize_model(model_type, k_folds, X_train, y_train):
         if model_type == "svr":
             search_spaces = {
-                "C": Real(1e-3, 1e3, prior="log-uniform"),
-                "gamma": Real(1e-4, 1e0, prior="log-uniform"),
-                "kernel": Categorical(["linear", "rbf", "poly"])
+                "estimator__C": Real(1e-3, 1e3, prior="log-uniform"),
+                "estimator__gamma": Real(1e-4, 1e0, prior="log-uniform"),
+                "estimator__kernel": Categorical(["linear", "rbf", "poly"])
             }
-            base_model = SVR()
+            base_model = MultiOutputRegressor(SVR())
 
         elif model_type == "random_forest":
             search_spaces = {
@@ -110,7 +112,12 @@ class Model:
         best_model = clone(base_model).set_params(**best_params)
         best_model.fit(X_train, y_train)
 
-        return Model(model_type, k_folds, **best_params)._replace_model(best_model)
+        clean_params = {
+            k.replace("estimator__", "") if k.startswith("estimator__") else k: v
+            for k, v in best_params.items()
+        }
+
+        return Model(model_type, k_folds, **clean_params)._replace_model(best_model)
 
     # --------------------------------------------------------
     # Hilfsfunktion zum Setzen des trainierten Modells
@@ -171,11 +178,32 @@ class Model:
     # Ergebnisse speichern
     # --------------------------------------------------------
     @staticmethod
-    def save_results_to_csv(scores, hyperparams, model_name, dataset_name, filename="results.csv"):
+    def save_results_to_csv(
+        scores,
+        hyperparams,
+        model_name,
+        dataset_name,
+        filename=None,
+        hyperparams_as_json=False
+    ):
         """
         Speichert Scores + Hyperparameter + Modell in eine CSV.
-        Hängt neue Ergebnisse an, falls die Datei bereits existiert.
+        - Jede Modellart erhält ihre eigene CSV-Datei.
+        - Dateien werden standardmäßig im Ordner opt/src/data/ gespeichert.
+        - Hängt neue Ergebnisse an, falls die Datei schon existiert.
+        - Falls neue Spalten auftauchen, wird die Datei neu geschrieben (mit erweitertem Header).
         """
+        import json
+
+        # --- Zielverzeichnis ---
+        save_dir = os.path.join("opt", "src", "data")
+        os.makedirs(save_dir, exist_ok=True)
+
+        # --- Falls kein Dateiname explizit übergeben -> automatisch aus Modellname ---
+        if filename is None:
+            filename = os.path.join(save_dir, f"{model_name}_results.csv")
+
+        # --- Zeilen bauen ---
         rows = []
         for key, vals in scores.items():
             row = {
@@ -183,19 +211,49 @@ class Model:
                 "Model": model_name,
                 "Topic": key
             }
-            row.update(vals)          # Scores hinzufügen
-            row.update(hyperparams)   # Hyperparameter hinzufügen
+            row.update(vals)
+
+            if hyperparams_as_json:
+                try:
+                    row["Hyperparameters"] = json.dumps(hyperparams, default=str)
+                except Exception:
+                    row["Hyperparameters"] = str(hyperparams)
+            else:
+                for k, v in (hyperparams or {}).items():
+                    if isinstance(v, (str, int, float, bool)) or v is None:
+                        row[k] = v
+                    else:
+                        row[k] = str(v)
+
             rows.append(row)
 
-        df = pd.DataFrame(rows)
+        df_new = pd.DataFrame(rows)
 
+        # Spaltenreihenfolge
+        front = ["Dataset", "Model", "Topic"]
+        front_present = [c for c in front if c in df_new.columns]
+        rest = [c for c in df_new.columns if c not in front_present]
+        df_new = df_new[front_present + rest]
+
+        # --- Datei schreiben oder anhängen ---
         if os.path.exists(filename):
-            df.to_csv(filename, mode="a", header=False, index=False)
+            existing_cols = pd.read_csv(filename, nrows=0).columns.tolist()
+
+            if set(df_new.columns).issubset(existing_cols):
+                df_new.to_csv(filename, mode="a", header=False, index=False)
+            else:
+                df_existing = pd.read_csv(filename)
+                union = list(dict.fromkeys(existing_cols + df_new.columns.tolist()))
+                df_existing = df_existing.reindex(columns=union)
+                df_new = df_new.reindex(columns=union)
+                df_concat = pd.concat([df_existing, df_new], ignore_index=True)
+                df_concat.to_csv(filename, index=False)
         else:
-            df.to_csv(filename, index=False)
+            df_new.to_csv(filename, index=False)
 
         print(f"Ergebnisse gespeichert in {filename}")
-        return df
+        return df_new
+
 
 
 # --------------------------------------------------------
