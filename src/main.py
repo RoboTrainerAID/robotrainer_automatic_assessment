@@ -35,6 +35,7 @@ def main():
 
     # --- 5) Aggregation nach Samples ---
     samples_per_second = float(settings.get("samples_per_second", 1))
+    add_age_gender = settings.get("add_age_gender", "False")
     data = processor.aggregate_by_samples(
         data,
         time_column=settings.get("time_column"),
@@ -51,8 +52,11 @@ def main():
     ground_truth_path = data_path.get("ground_truth_csv")
     data = processor.add_ground_truth(data, ground_truth_path, on_column="user")
 
+    # --- Count the number of topics ---
+    num_topics = len([t.strip() for t in settings.get("topics", "").split(",") if t.strip()])
+
     # --- Save processed data ---
-    data.to_csv("opt/src/data/processed_data.csv", index=False)
+    data.to_csv(f"opt/src/data/processed_data_{samples_per_second}_{add_age_gender}_{num_topics}.csv", index=False)
 
     # --- Show final data ---
     print("\n--- Ergebnis ---")

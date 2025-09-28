@@ -76,7 +76,7 @@ duration_column = total_duration
 ```
 
 ## Output
-- Processed dataset (CSV) → `src/processed_data/*.csv`
+- Processed dataset (CSV) → `src/data/processed_data_<samples_per_second>_<add_age_gender>_<num_topics>.csv`
 - Includes:
     - Filtered topics
     - Aggregated rows (based on sampling rate)
