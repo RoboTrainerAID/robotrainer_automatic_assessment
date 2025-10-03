@@ -1,7 +1,7 @@
 import pandas as pd
 import configparser
 import os
-from data_processing import DataProcessor  # deine Klasse
+from data_processing import DataProcessor  
 
 def main():
     # --- Load configuration ---
@@ -31,7 +31,6 @@ def main():
     # --- Remove duplicate columns ---
     data = data.loc[:, ~data.columns.duplicated()].copy()
     user_info = user_info.loc[:, ~user_info.columns.duplicated()].copy()
-
 
     # --- 5) Aggregation nach Samples ---
     samples_per_second = float(settings.get("samples_per_second", 1))
@@ -63,6 +62,5 @@ def main():
     print(data)
 
   
-
 if __name__ == "__main__":
     main()

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 
 class DataProcessor:
+    """Processes data based on configuration settings."""
 
     def add_age_and_gender(self, data, user_info):
         """
