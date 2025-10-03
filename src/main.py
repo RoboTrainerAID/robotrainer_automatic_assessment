@@ -32,7 +32,7 @@ def main():
     data = data.loc[:, ~data.columns.duplicated()].copy()
     user_info = user_info.loc[:, ~user_info.columns.duplicated()].copy()
 
-    # --- 5) Aggregation nach Samples ---
+    # --- Aggregation by samples ---
     samples_per_second = float(settings.get("samples_per_second", 1))
     add_age_gender = settings.get("add_age_gender", "False")
     data = processor.aggregate_by_samples(
