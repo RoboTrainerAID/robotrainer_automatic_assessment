@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import StandardScaler
 
 
 
@@ -15,26 +17,60 @@ def data_normalization(df):
 
 def apply_pca(X, n_components=0.95):
     """
-    Apply PCA to NumPy array X
+    Apply PCA to the data.
     """
+
     X = np.array(X)
+    print(f"PCA Input shape: {X.shape}")
+    
+    # Überprüfe Matrix-Größe für LAPACK-Kompatibilität
+    total_elements = X.shape[0] * X.shape[1]
+    print(f"Total matrix elements: {total_elements}")
+    
+    if total_elements > 2e9:  # Grenze für LAPACK
+        print("Matrix too large for standard PCA. Using TruncatedSVD...")
+        
+        
+        imputer = SimpleImputer(strategy="mean")
+        X_imputed = imputer.fit_transform(X)
+        
+        # Standardization before truncated SVD
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X_imputed)
+        
+        # Specify number of components
+        if isinstance(n_components, float):
+            n_comp = min(min(X.shape) - 1, 100)  # Maximum 100 components
+        else:
+            n_comp = min(n_components, min(X.shape) - 1)
+            
+        svd = TruncatedSVD(n_components=n_comp, random_state=42)
+        X_pca = svd.fit_transform(X_scaled)
 
-    imputer = SimpleImputer(strategy="mean")
-    X_imputed = imputer.fit_transform(X)
+        # Compute cumulative explained variance
+        explained_variance_ratio = svd.explained_variance_ratio_
 
-    pca = PCA(n_components=n_components)
-    X_pca = pca.fit_transform(X_imputed)
+        print(f"TruncatedSVD: {n_comp} components, Explained Variance: {explained_variance_ratio.sum():.3f}")
+
+    else:
+        # Standard PCA
+        imputer = SimpleImputer(strategy="mean")
+        X_imputed = imputer.fit_transform(X)
+
+        pca = PCA(n_components=n_components)
+        X_pca = pca.fit_transform(X_imputed)
+        explained_variance_ratio = pca.explained_variance_ratio_
 
     X_pca_df = pd.DataFrame(X_pca, columns=[f'PC{i+1}' for i in range(X_pca.shape[1])])
 
-    #Scree Plot to visualize explained variance by each principal component 
-    plt.plot(range(1, len(pca.explained_variance_ratio_)+1), pca.explained_variance_ratio_.cumsum(), marker='o')
-    plt.xlabel("Anzahl Komponenten")
-    plt.ylabel("Kumulative erklärte Varianz")
+    # Scree Plot to visualize explained variance by each principal component
+    plt.plot(range(1, len(explained_variance_ratio)+1), explained_variance_ratio.cumsum(), marker='o')
+    plt.xlabel("Number of Components")
+    plt.ylabel("Cumulative Explained Variance")
     plt.title("Scree Plot")
     plt.show()
 
-    return X_pca_df, pca.explained_variance_ratio_
+    return X_pca_df, explained_variance_ratio
 
 
 def prepare_input_blocks(df, pipeline_config, mode="row"):
