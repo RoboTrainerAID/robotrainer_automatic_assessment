@@ -38,6 +38,15 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 COPY .bashrc /root/.bashrc
 
+##############################################################################
+##                                    Python-Pakete                                  ##
+##############################################################################
+# Install packages via conda for better compatibility
+RUN conda install -c conda-forge scikit-learn pandas numpy scipy matplotlib seaborn -y
+RUN pip install scikit-optimize
+# Auto-sklearn alternative - use FLAML which is more modern and maintained
+RUN pip install "flaml[automl]"
+
 
 ##############################################################################
 ##                                 Autostart                                ##
