@@ -19,7 +19,8 @@ export XAUTHORITY=${XAUTHORITY:-$HOME/.Xauthority}
 
 docker run \
     --name ${CONTAINER_NAME} \
-    --privileged \
+    --cap-add=SYS_PTRACE \
+    --security-opt seccomp=unconfined \
     -it \
     --net host \
     --rm \
@@ -30,7 +31,8 @@ docker run \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v $PWD/envs:/opt/conda/envs \
     -v $PWD/notebooks:/opt/notebooks \
-    -v /dev:/dev  \
+    -v $PWD/src:/opt/src \
+    -v $PWD/data:/opt/data \
     ${CONTAINER_NAME}:${CONTAINER_TAG} \
     /bin/bash -c "${COMMAND}"
 

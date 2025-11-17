@@ -38,6 +38,13 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 COPY .bashrc /root/.bashrc
 
+##############################################################################
+##                                    Python-Pakete                                  ##
+##############################################################################
+# Install auto-sklearn (über pip)
+#RUN pip install auto-sklearn
+RUN pip install scikit-optimize
+
 
 ##############################################################################
 ##                                 Autostart                                ##
